@@ -12,16 +12,16 @@
 # Load R libs ####
 library(dplyr)
 library(edgeR)
-library(sva)
-library(limma)
-library(reshape2)
+library(fgsea)
 library(ggplot2)
-library(viridis)
-library(stringr)
 library(ggrepel)
-library(pheatmap)
 library(gridExtra)
+library(limma)
+library(pheatmap)
 library(RColorBrewer)
+library(reshape2)
+library(stringr)
+library(viridis)
 
 # Load lung cell marker lists from Tabula Muris ####
 file_path <- "../data/Tabula_Muris.txt"
@@ -105,8 +105,35 @@ plot_pca <- function(input,title){
 plot_pca(lcpm,'PCA of gene expression')
 
 ggsave(
-  '/Users/lukas/OneDrive/Miko/THINC/projects/Shivanna/adm_paper/Fig1_pca.pdf', 
+  '../outputs/Fig1_pca.pdf', 
   width = 6, height = 5)
+
+
+# Run differential expression analysis ####
+group <- as.factor(metadata$Group)
+design <- model.matrix(~0+group)
+colnames(design) <- gsub("group", "", colnames(design))
+colnames(design) <- gsub("-", "_", fixed = T, colnames(design))
+
+contr.matrix <- makeContrasts(
+  AMKOLPSvsPBS = AMKO_LPS - AMKO_PBS,
+  WTLPSvsPBS = WT_LPS - WT_PBS,
+  Diff = (AMKO_LPS - AMKO_PBS)-(WT_LPS - WT_PBS),
+  levels = colnames(design))
+
+v <- voom(DEGL, design, plot = TRUE)
+vfit <- lmFit(v, design)
+vfit <- contrasts.fit(vfit, contrasts=contr.matrix)
+efit <- eBayes(vfit)
+
+tfit <- treat(vfit, lfc=0.5)
+dt <- decideTests(tfit)
+summary(dt)
+
+AMKOLPSvsPBS <- topTreat(tfit, coef=1, n=Inf)
+WTLPSvsPBS <- topTreat(tfit, coef=2, n=Inf)
+
+diff <- topTreat(tfit, coef=3, n=Inf)
 
 # Model with each coefficient corresponding to a group mean - NO INTERACTION
 group <- as.factor(metadata$Group)
@@ -123,31 +150,21 @@ contr.matrix
 
 par(mfrow=c(1,2))
 v <- voom(DEGL, design, plot=TRUE)
-v
 vfit <- lmFit(v, design)
 vfit <- contrasts.fit(vfit, contrasts=contr.matrix)
 efit <- eBayes(vfit)
 plotSA(efit, main="Final model: Mean-variance trend")
 
-resultz <- summary(decideTests(efit))
-vennDiagram(resultz)
-
 tfit <- treat(vfit, lfc=0.5)
 dt <- decideTests(tfit)
-summary(dt)
 
 AMKOLPSvsPBS <- topTreat(tfit, coef=1, n=Inf)
-head(AMKOLPSvsPBS)
-
 WTLPSvsPBS <- topTreat(tfit, coef=2, n=Inf)
-head(WTLPSvsPBS)
-
 diff <- topTreat(tfit, coef=3, n=Inf)
-head(diff)
+
 
 # Fig 1 - top 50 heatmap ####
 Top50 = topTable(efit,number=50,adjust="BH")
-str(Top50)
 
 Xtop = lcpm[rownames(Top50),] %>% as.data.frame
 
@@ -235,12 +252,62 @@ plot_gene <- function(gene){
 p1 <- plot_gene("Slit2")
 p2 <- plot_gene("Mmp9")
 
-p <- grid.arrange(p1, p2, ncol=2)
+p <- grid.arrange(p1, p2, ncol = 2)
 
 ggsave(
   p,
-  filename = "/Users/lukas/OneDrive/Miko/THINC/projects/Shivanna/adm_paper/fig1_boxplots.pdf",
+  filename = "../outputs/fig1_boxplots.pdf",
   width = 8, height = 4)
+
+
+# Fig 2 - enrichment for Stat1/3 targets ####
+trrust <- read.delim(
+  "../data/trrust_rawdata.mouse.tsv",
+  header = F)
+stat1_targets <- trrust$V2[which(trrust$V1 == "Stat1")]
+stat3_targets <- trrust$V2[which(trrust$V1 == "Stat3")]
+
+AMKOLPSvsPBS$gene <- data$GeneSymbol[match(rownames(AMKOLPSvsPBS),data$GeneID)]
+AMKOLPSvsPBS$stat1 <- AMKOLPSvsPBS$gene %in% stat1_targets
+AMKOLPSvsPBS$stat3 <- AMKOLPSvsPBS$gene %in% stat3_targets
+
+ranks <- AMKOLPSvsPBS$logFC
+names(ranks) <- AMKOLPSvsPBS$gene
+paths <- list(stat1 = stat1_targets, stat3 = stat3_targets)
+enrich_adm <- fgsea(ranks, pathways = paths)
+
+WTLPSvsPBS$gene <- data$GeneSymbol[match(rownames(WTLPSvsPBS),data$GeneID)]
+WTLPSvsPBS$stat1 <- WTLPSvsPBS$gene %in% stat1_targets
+WTLPSvsPBS$stat3 <- WTLPSvsPBS$gene %in% stat3_targets
+
+ranks <- WTLPSvsPBS$logFC
+names(ranks) <- WTLPSvsPBS$gene
+paths <- list(stat1 = stat1_targets, stat3 = stat3_targets)
+enrich_wt <- fgsea(ranks, pathways = paths)
+
+aframe <- rbind(
+  data.frame(
+    tf = "stat1",
+    adm = AMKOLPSvsPBS$logFC[AMKOLPSvsPBS$stat1],
+    wt = WTLPSvsPBS$logFC[WTLPSvsPBS$stat1]),
+  data.frame(
+    tf = "stat3",
+    adm = AMKOLPSvsPBS$logFC[AMKOLPSvsPBS$stat3],
+    wt = WTLPSvsPBS$logFC[WTLPSvsPBS$stat3]))
+
+aframe <- reshape2::melt(aframe, id.vars = "tf")
+ggplot(aframe, aes(value, color = variable)) +
+  labs(
+    x = "log2 fold change"
+  ) +
+  facet_wrap(~tf, scales = "free") +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  stat_ecdf() +
+  theme_classic()
+
+ggsave(
+  filename = "../outputs/fig2_enrichment.pdf",
+  width = 4, height = 4)
 
 
 # Fig 2 - qPCR/protein data validation ####
@@ -302,7 +369,7 @@ p <- gridExtra::grid.arrange(p1, p2, ncol = 2)
 
 ggsave(
   p,
-  filename = "/Users/lukas/OneDrive/Miko/THINC/projects/Shivanna/adm_paper/figure_2_matched_boxplots.pdf",
+  filename = "../outputs/figure_2_matched_boxplots.pdf",
   height = 14, width = 7)
 
 
@@ -346,7 +413,7 @@ ggplot(XY[order(XY$group), ], aes(
   theme_classic()
 
 ggsave(
-  filename = "/Users/lukas/OneDrive/Miko/THINC/projects/Shivanna/adm_paper/double_contrast.pdf",
+  filename = "../outputs/double_contrast.pdf",
   height = 9, width = 10)
 
 
@@ -360,8 +427,9 @@ p <- grid.arrange(p4, p2, p1, p3, ncol = 2)
 
 ggsave(
   p,
-  filename = "/Users/lukas/OneDrive/Miko/THINC/projects/Shivanna/adm_paper/double_contrast_boxplots.pdf",
+  filename = "../outputs/double_contrast_boxplots.pdf",
   height = 10, width = 10)
+
 
 # Fig 4 - boxplot of selected genes ####
 p1 <- plot_gene('Ppm1j')
@@ -375,6 +443,6 @@ p <- grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3)
 
 ggsave(
   p,
-  filename = "/Users/lukas/OneDrive/Miko/THINC/projects/Shivanna/adm_paper/cell_type_marker_boxplots.pdf",
+  filename = "../outputs/cell_type_marker_boxplots.pdf",
   height = 4, width = 9)
 
