@@ -1,9 +1,3 @@
-## https://yulab-smu.top/biomedical-knowledge-mining-book/enrichment-overview.html
-## https://learn.gencore.bio.nyu.edu/rna-seq-analysis/gene-set-enrichment-analysis/
-## chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://bioconductor.org/packages/devel/bioc/manuals/fgsea/man/fgsea.pdf
-## https://bioinformatics-core-shared-training.github.io/cruk-summer-school-2018/RNASeq2018/html/06_Gene_set_testing.nb.html#gsea-analysis
-
-
 library(dplyr)
 library(edgeR)
 library(sva)
@@ -21,7 +15,7 @@ library(RColorBrewer)
 
 ##########----------------------##########
 # Make lung cell marker lists from Tabula Muris
-file_path <- "C:/Users/spalit/Downloads/Tabula_Muris.txt"
+file_path <- "../data/Tabula_Muris.txt"
 data_list <- list()
 
 con <- file(file_path, "r")
@@ -46,7 +40,7 @@ lung_data_list <- data_list[grep('Lung',names(data_list),value = T)]
 ## Series GSE156028
 ## code availability - https://psilveyra.github.io/silveyralab/
 
-data <- read.csv('C:/Users/spalit/Downloads/GSE156028_NGSCSVBPDwCfirst.csv/GSE156028_NGSCSVBPDwCfirst.csv')
+data <- read.csv('../data/GSE156028_NGSCSVBPDwCfirst.csv')
 data <- data[-which(rowSums(data[,c(2:ncol(data))]) == 0),] # removing genes with zero counts across all samples
 
 table(data$gene) %>% table # 50539 genes only occur once (not duplicated)
@@ -137,7 +131,7 @@ plotSA(efit, main="Final model: Mean-variance trend")
 
 CvBPD=topTable(efit, coef = "CvBPD", adjust = "BH", sort.by = "p",n=Inf)
 CvBPD
-write.csv(CvBPD, 'C:/Users/spalit/Documents/differential_genes_BPD.csv')
+write.csv(CvBPD, 'differential_genes_BPD.csv')
 # CvBPD$is_DE <- "NO"
 # CvBPD$is_DE[CvBPD$logFC > 0.1 & CvBPD$adj.P.Val < 0.8] <- "UP"
 # CvBPD$is_DE[CvBPD$logFC < -0.1 & CvBPD$adj.P.Val < 0.8] <- "DOWN"
@@ -248,7 +242,7 @@ ggplot(foo[complete.cases(foo),], aes(x=BPD_lfc, col=term)) +
 # # meta is just the RNAseq data from Binoy - we are only going to use information
 # # on which of the mice genes are protein coding and which are not
 # # subset on only protein coding genes
-# meta <- read.csv('C:/Users/spalit/Downloads/combined-rnaseq.featureCounts-genes_Binoy.csv')[,c('GeneSymbol','GeneBiotype')] %>% unique
+# meta <- read.csv('../data/combined-rnaseq.featureCounts-genes_Binoy.csv')[,c('GeneSymbol','GeneBiotype')] %>% unique
 # meta <- meta[which(meta$GeneBiotype == 'protein_coding'),]
 # 
 # genes_mmu <- genes_mmu[which(genes_mmu$MGI.symbol %in% meta$GeneSymbol),] # keep only protein coding genes
