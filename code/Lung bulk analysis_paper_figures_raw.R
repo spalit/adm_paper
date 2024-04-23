@@ -49,10 +49,10 @@ lung_data_list <- data_list[grep('Lung',names(data_list),value = T)]
 
 ##########----------------------##########
 # Load bulk RNA seq data (Binoy)
-metadata <- readxl::read_xlsx('C:/Users/spalit/Downloads/annotation.xlsx', sheet = 1)[,c(1,2)]
+metadata <- readxl::read_xlsx('annotation.xlsx', sheet = 1)[,c(1,2)]
 metadata$Group %>% unique #4
 
-data <- read.csv('C:/Users/spalit/Downloads/combined-rnaseq.featureCounts-genes_Binoy.csv')
+data <- read.csv('combined-rnaseq.featureCounts-genes_Binoy.csv')
 data$GeneBiotype %>% unique
 
 # Perform analysis with only protein-coding genes
@@ -247,7 +247,7 @@ ggplot(data=WTLPSvsPBS, aes(x=logFC, y=-log10(adj.P.Val), col=diffexpressed, lab
 # Matching gene/protein expression results from previous studies
 
 # qPCR/protein data in box-plots
-df <- readxl::read_excel('C:/Users/spalit/Downloads/Gene and protein expression results from previous publication.xlsx',col_types = "numeric", sheet = 1)
+df <- readxl::read_excel('Gene and protein expression results from previous publication.xlsx',col_types = "numeric", sheet = 1)
 df <- subset(df, rowSums(is.na(df)) != ncol(df))
 
 foo <- c(1:5)
