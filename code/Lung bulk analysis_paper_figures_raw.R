@@ -4,13 +4,6 @@
 ## There are 4 conditions (3 replicates each)
 ## Standard bulk analysis, differential expression, PCA, gene set enrichment
 
-# RESOURCES
-## Adding interaction term https://support.bioconductor.org/p/46153/
-## https://ucdavis-bioinformatics-training.github.io/2018-June-RNA-Seq-Workshop/thursday/DE.html
-## https://biocorecrg.github.io/CRG_RIntroduction/volcano-plots.html
-## https://ycl6.github.io/GO-Enrichment-Analysis-Demo/4_enrichR.html#Session_information
-## https://f1000research.com/articles/5-1438
-## Stat17Stat3 downstream targets - https://www.gsea-msigdb.org/gsea/msigdb/human/geneset/STAT1_01.html
 
 library(dplyr)
 library(edgeR)
@@ -28,7 +21,7 @@ library(RColorBrewer)
 
 ##########----------------------##########
 # Make lung cell marker lists from Tabula Muris
-file_path <- "C:/Users/spalit/Downloads/Tabula_Muris.txt"
+file_path <- "../data/Tabula_Muris.txt"
 data_list <- list()
 
 con <- file(file_path, "r")
@@ -49,10 +42,10 @@ lung_data_list <- data_list[grep('Lung',names(data_list),value = T)]
 
 ##########----------------------##########
 # Load bulk RNA seq data (Binoy)
-metadata <- readxl::read_xlsx('annotation.xlsx', sheet = 1)[,c(1,2)]
+metadata <- readxl::read_xlsx('../data/annotation.xlsx', sheet = 1)[,c(1,2)]
 metadata$Group %>% unique #4
 
-data <- read.csv('combined-rnaseq.featureCounts-genes_Binoy.csv')
+data <- read.csv('../data/combined-rnaseq.featureCounts-genes_Binoy.csv')
 data$GeneBiotype %>% unique
 
 # Perform analysis with only protein-coding genes
@@ -160,8 +153,8 @@ head(AMKOvsWTLPS)
 AMKOLPSvsPBS$gene <- data$GeneSymbol[match(rownames(AMKOLPSvsPBS),data$GeneID)]
 WTLPSvsPBS$gene <- data$GeneSymbol[match(rownames(WTLPSvsPBS),data$GeneID)]
 
-write.csv(AMKOLPSvsPBS, 'C:/Users/spalit/Documents/differential_genes_LPSvsPBS_AMKO.csv')
-write.csv(WTLPSvsPBS, 'C:/Users/spalit/Documents/differential_genes_LPSvsPBS_WT.csv')
+write.csv(AMKOLPSvsPBS, 'differential_genes_LPSvsPBS_AMKO.csv')
+write.csv(WTLPSvsPBS, 'differential_genes_LPSvsPBS_WT.csv')
 # diff <- topTreat(tfit, coef=3, n=Inf)
 # head(diff)
 
@@ -247,7 +240,7 @@ ggplot(data=WTLPSvsPBS, aes(x=logFC, y=-log10(adj.P.Val), col=diffexpressed, lab
 # Matching gene/protein expression results from previous studies
 
 # qPCR/protein data in box-plots
-df <- readxl::read_excel('Gene and protein expression results from previous publication.xlsx',col_types = "numeric", sheet = 1)
+df <- readxl::read_excel('../data/Gene and protein expression results from previous publication.xlsx',col_types = "numeric", sheet = 1)
 df <- subset(df, rowSums(is.na(df)) != ncol(df))
 
 foo <- c(1:5)
@@ -348,7 +341,7 @@ ggplot(XY, aes(x=WT_lfc, y=AMKO_lfc, col=group)) +
   xlim(-7,12) + ylim(-7,12) #, aes(shape=group)
 
 list_of_s_AMKO_genes$GeneSymbol <- data$GeneSymbol[match(rownames(list_of_s_AMKO_genes),data$GeneID)]
-write.csv(list_of_s_AMKO_genes, 'C:/Users/spalit/Documents/130324_genes_sign_in_AMKO_not_in_WT.csv')
+write.csv(list_of_s_AMKO_genes, '130324_genes_sign_in_AMKO_not_in_WT.csv')
 
 
 # ALL GENES NOT DIFFERENTIALLY EXPRESSED IN AMKO
@@ -368,7 +361,7 @@ ggplot(XY, aes(x=WT_lfc, y=AMKO_lfc, col=group)) +
   xlim(-7,12) + ylim(-7,12) #, aes(shape=group)
 
 list_of_ns_AMKO_genes$GeneSymbol <- data$GeneSymbol[match(rownames(list_of_ns_AMKO_genes),data$GeneID)]
-write.csv(list_of_ns_AMKO_genes, 'C:/Users/spalit/Documents/130324_genes_sign_in_WT_not_in_AMKO.csv')
+write.csv(list_of_ns_AMKO_genes, '130324_genes_sign_in_WT_not_in_AMKO.csv')
 
 # BOXPLOTS OF SELECTED GENES
 
@@ -581,7 +574,6 @@ foo <- cbind.data.frame(group = metadata$Group,
   }
   
   mean_lcpm_LPS_norm <- t(apply(mean_lcpm_LPS, 1, cal_z_score))
-  # https://davetang.org/muse/2018/05/15/making-a-heatmap-in-r-with-the-pheatmap-package/
   pheatmap(mean_lcpm_LPS_norm, annotation_col = metadata01, annotation_row = X, cutree_cols = 2, cluster_rows = FALSE,# cutree_rows = 3,
            border_color = NA, cellheight = 10, cellwidth = 10, gaps_row = c(10,20))
   
