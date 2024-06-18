@@ -418,8 +418,8 @@ ggsave(
 
 
 # Fig 3 - boxplot of selected genes ####
-p1 <- plot_gene('Pdlim3')
-p2 <- plot_gene('Mat1a')
+p1 <- plot_gene('Mat1a')
+p2 <- plot_gene('Fgf10')
 p3 <- plot_gene('Neb')
 p4 <- plot_gene('Syt6')
 
